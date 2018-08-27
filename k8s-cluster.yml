@@ -1,0 +1,16 @@
+---
+- name: k8s-master
+  box: "k8s-master"
+  mem: 3048
+  cpu: 1
+  ip: 192.168.10.10
+- name: k8s-node1
+  box: "k8s-node"
+  mem: 2048
+  cpu: 1
+  ip: 192.168.10.11
+- name: k8s-node2
+  box: "k8s-node"
+  mem: 2048
+  cpu: 1
+  ip: 192.168.10.12
