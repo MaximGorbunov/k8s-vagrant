@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+  labels:
+    component: etcd
+    tier: control-plane
+  name: etcd
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - etcd
+    - --data-dir=/var/lib/etcd
+    - --listen-client-urls=http://127.0.0.1:4001
+    - --advertise-client-urls=http://127.0.0.1:4001
+    image: gcr.io/google_containers/etcd-amd64:3.1.11
+    name: etcd
+    volumeMounts:
+    - mountPath: /var/lib/etcd
+      name: etcd
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /var/lib/etcd
+      type: DirectoryOrCreate
+    name: etcd

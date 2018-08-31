@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager
+spec:
+  hostNetwork: true
+  containers:
+    - name: kube-controller-manager
+      image: 'k8s.gcr.io/hyperkube:v1.11.2'
+      command:
+        - '/hyperkube'
+      args:
+        - 'controller-manager'
+        - '--root-ca-file=/srv/kubernetes/ca.crt'
+        - '--service-account-private-key-file=/srv/kubernetes/server.key'
+        - '--master=127.0.0.1:8080'
+      volumeMounts:
+        - name: srvkube
+          mountPath: '/srv/kubernetes'
+          readOnly: true
+        - name: etcssl
+          mountPath: '/etc/ssl'
+          readOnly: true
+      livenessProbe:
+        httpGet:
+          scheme: HTTP
+          path: '/healthz'
+          host: '127.0.0.1'
+          port: 10252
+        initialDelaySeconds: 15
+        timeoutSeconds: 15
+  volumes:
+    - name: srvkube
+      hostPath:
+        path: '/srv/kubernetes'
+    - name: etcssl
+      hostPath:
+        path: '/etc/ssl'

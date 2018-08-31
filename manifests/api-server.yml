@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+spec:
+  hostNetwork: true
+  containers:
+    - name: kube-apiserver
+      image: 'k8s.gcr.io/hyperkube:v1.11.2'
+      command:
+        - '/hyperkube'
+      args:
+        - 'apiserver'
+        - '--address=127.0.0.1'
+        - '--allow-privileged=true'
+        - '--secure-port=443'
+        - '--authorization-mode=RBAC'
+        - '--advertise-address=192.168.10.10'
+        - '--service-cluster-ip-range=10.0.0.0/12'
+        - '--etcd-servers=http://127.0.0.1:4001'
+        - '--tls-cert-file=/srv/kubernetes/server.crt'
+        - '--tls-private-key-file=/srv/kubernetes/server.key'
+        - '--enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota'
+        - '--client-ca-file=/srv/kubernetes/ca.crt'
+        - '--kubelet-client-certificate=/srv/kubernetes/client.crt'
+        - '--kubelet-client-key=/srv/kubernetes/client.key'
+        - '--service-account-key-file=/srv/kubernetes/server.key'
+        - '--token-auth-file=/srv/kubernetes/known_tokens.csv'
+      volumeMounts:
+        - name: srvkube
+          mountPath: '/srv/kubernetes'
+          readOnly: true
+        - name: etcssl
+          mountPath: '/etc/ssl'
+          readOnly: true
+      livenessProbe:
+        httpGet:
+          path: '/healthz'
+          port: 8080
+          host: '127.0.0.1'
+          scheme: 'HTTP'
+        initialDelaySeconds: 15
+        timeoutSeconds: 15
+  volumes:
+    - name: srvkube
+      hostPath:
+        path: '/srv/kubernetes'
+    - name: etcssl
+      hostPath:
+        path: '/etc/ssl'

@@ -1,9 +1,11 @@
-swapoff -a 
+#!/usr/bin/env bash
+swapoff -a
 setenforce 0
 sed -i --follow-symlinks "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/sysconfig/selinux
+modprobe br_netfilter
 sysctl -w net.ipv4.ip_forward=1 
 sysctl -w net.bridge.bridge-nf-call-iptables=1
-yum -y install docker wget
+yum -y install docker wget conntrack
 systemctl enable docker
 systemctl start docker
 cd /tmp
@@ -107,11 +109,11 @@ cat <<EOT > api.json
           "--allow-privileged=true",
           "--secure-port=443",
           "--authorization-mode=RBAC",
+		  "--advertise-address=192.168.10.10",
           "--service-cluster-ip-range=10.0.0.0/12",
           "--etcd-servers=http://127.0.0.1:4001",
           "--tls-cert-file=/srv/kubernetes/server.crt",
-          "--tls-private-key-file=/srv/kubernetes/server.key",
-          "--enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota",
+          "--tls-private-key-file=/srv/kubernetes/server.key", "--enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota",
           "--client-ca-file=/srv/kubernetes/ca.crt",
           "--kubelet-client-certificate=/srv/kubernetes/client.crt",
           "--kubelet-client-key=/srv/kubernetes/client.key",
@@ -300,7 +302,6 @@ kind: KubeletConfiguration
 apiVersion: kubelet.config.k8s.io/v1beta1
 staticPodPath: /etc/kubernetes/manifests
 cgroupDriver: systemd
-kubeletCgroups: /systemd/system.slice
 authentication:
   x509:
     clientCAFile: /srv/kubernetes/client.crt
@@ -315,14 +316,24 @@ After=docker.service
 Requires=docker.service
 
 [Service]
+CPUAccounting=true
+MemoryAccounting=true
 User=root
 Group=root
-ExecStart=/opt/kubernetes/server/bin/kubelet --kubeconfig=/var/lib/kubelet/kubeconfig --config=/etc/kubernetes/kubelet.yml --runtime-cgroups=/systemd/system.slice --network-plugin=cni
+ExecStart=/opt/kubernetes/server/bin/kubelet --kubeconfig=/var/lib/kubelet/kubeconfig --config=/etc/kubernetes/kubelet.yml --network-plugin=cni
 Restart=on-failure
 KillMode=process
 
 [Install]
 WantedBy=multi-user.target
+EOT
+cat <<EOT > /etc/kubernetes/kube-proxy.yml
+kind: KubeProxyConfiguration
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+clientConnection:
+  kubeconfig: "/var/lib/kube-proxy/kubeconfig"
+mode: "iptables"
+clusterCIDR: "10.32.0.0/12"
 EOT
 cat <<EOT > /etc/systemd/system/kube-proxy.service
 [Unit]
@@ -331,7 +342,7 @@ Documentation=https://kubernetes.io/docs/concepts/overview/components/#kube-prox
 After=network.target
 
 [Service]
-ExecStart=/opt/kubernetes/server/bin/kube-proxy --master=https://192.168.10.10 --kubeconfig=/var/lib/kube-proxy/kubeconfig
+ExecStart=/opt/kubernetes/server/bin/kube-proxy --config=/etc/kubernetes/kube-proxy.yml
 restart=on-failure
 LimitNOFILE=65536
 
@@ -345,6 +356,9 @@ wget https://github.com/containernetworking/plugins/releases/download/v0.7.1/cni
 tar xzf cni-amd64-v0.6.0.tgz
 tar xzf cni-plugins-amd64-v0.7.1.tgz
 rm -f cni-plugins-amd64-v0.7.1.tgz cni-amd64-v0.6.0.tgz
+systemctl enable kubelet kube-proxy
+systemctl start kubelet kube-proxy
+sleep 50
 kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 kubectl create secret generic kubernetes-dashboard-certs --from-file=/srv/kubernetes -n kube-system
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
