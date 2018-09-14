@@ -356,9 +356,14 @@ wget https://github.com/containernetworking/plugins/releases/download/v0.7.1/cni
 tar xzf cni-amd64-v0.6.0.tgz
 tar xzf cni-plugins-amd64-v0.7.1.tgz
 rm -f cni-plugins-amd64-v0.7.1.tgz cni-amd64-v0.6.0.tgz
+curl -L git.io/weave -o /usr/local/bin/weave
+chmod a+x /usr/local/bin/weave
+mkdir -p /etc/cni/net.d
+weave setup
+weave launch
 systemctl enable kubelet kube-proxy
 systemctl start kubelet kube-proxy
-sleep 50
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+#apply dns yml
 kubectl create secret generic kubernetes-dashboard-certs --from-file=/srv/kubernetes -n kube-system
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml

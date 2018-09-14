@@ -9,3 +9,8 @@
   mem: 3048
   cpu: 1
   ip: 192.168.10.11
+- name: k8s-node2
+  box: "centos/7"
+  mem: 3048
+  cpu: 1
+  ip: 192.168.10.12

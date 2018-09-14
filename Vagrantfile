@@ -4,10 +4,10 @@
   end
 end
 require 'yaml' 
-vagrantRoot = File.dirname(__FILE__) 
-if not Pathname(vagrantRoot + '/k8s-cluster.yml').exist? 
-    fail "cluster config file k8s-cluster.yml not found" 
-end 
+vagrantRoot = File.dirname(__FILE__)
+unless Pathname(vagrantRoot + '/k8s-cluster.yml').exist?
+  fail "cluster config file k8s-cluster.yml not found"
+end
 servers = YAML.load_file(vagrantRoot + '/k8s-cluster.yml') 
 key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip 
 Vagrant.configure("2") do |config| 
@@ -26,4 +26,7 @@ Vagrant.configure("2") do |config|
             end 
         end 
     end 
+end
+def isMasterNode(name)
+  name.include? "master"
 end

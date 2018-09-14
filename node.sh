@@ -91,5 +91,10 @@ wget https://github.com/containernetworking/plugins/releases/download/v0.7.1/cni
 tar xzf cni-amd64-v0.6.0.tgz
 tar xzf cni-plugins-amd64-v0.7.1.tgz
 rm -f cni-plugins-amd64-v0.7.1.tgz cni-amd64-v0.6.0.tgz
+curl -L git.io/weave -o /usr/local/bin/weave
+chmod a+x /usr/local/bin/weave
+mkdir -p /etc/cni/net.d
+weave setup
+#vi add ipam.subnet to /etc/cni/net.d/10-weave.conf
 systemctl enable kubelet kube-proxy
 systemctl start kubelet kube-proxy
